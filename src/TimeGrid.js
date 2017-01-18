@@ -1,402 +1,431 @@
-import React, { Component } from 'react';
-import cn from 'classnames';
-import { findDOMNode } from 'react-dom';
+'use strict';
 
-import dates from './utils/dates';
-import localizer from './localizer'
-import DayColumn from './DayColumn';
-import TimeColumn from './TimeColumn';
-import DateContentRow from './DateContentRow';
-import Header from './Header';
+exports.__esModule = true;
 
-import getWidth from 'dom-helpers/query/width';
-import scrollbarSize from 'dom-helpers/util/scrollbarSize';
-import message from './utils/messages';
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-import { accessor, dateFormat } from './utils/propTypes';
+var _react = require('react');
 
-import { notify } from './utils/helpers';
-import { navigate } from './utils/constants';
+var _react2 = _interopRequireDefault(_react);
 
-import { accessor as get } from './utils/accessors';
+var _classnames = require('classnames');
 
-import { inRange, sortEvents, segStyle } from './utils/eventLevels';
+var _classnames2 = _interopRequireDefault(_classnames);
 
-export default class TimeGrid extends Component {
+var _reactDom = require('react-dom');
 
-  static propTypes = {
-    events: React.PropTypes.array.isRequired,
+var _dates = require('./utils/dates');
 
-    step: React.PropTypes.number,
-    start: React.PropTypes.instanceOf(Date),
-    end: React.PropTypes.instanceOf(Date),
-    min: React.PropTypes.instanceOf(Date),
-    max: React.PropTypes.instanceOf(Date),
-    now: React.PropTypes.instanceOf(Date),
+var _dates2 = _interopRequireDefault(_dates);
 
-    scrollToTime: React.PropTypes.instanceOf(Date),
-    eventPropGetter: React.PropTypes.func,
-    dayFormat: dateFormat,
-    culture: React.PropTypes.string,
+var _localizer = require('./localizer');
 
-    rtl: React.PropTypes.bool,
-    width: React.PropTypes.number,
+var _localizer2 = _interopRequireDefault(_localizer);
 
-    titleAccessor: accessor.isRequired,
-    allDayAccessor: accessor.isRequired,
-    startAccessor: accessor.isRequired,
-    endAccessor: accessor.isRequired,
+var _DayColumn = require('./DayColumn');
 
-    selected: React.PropTypes.object,
-    selectable: React.PropTypes.oneOf([true, false, 'ignoreEvents']),
+var _DayColumn2 = _interopRequireDefault(_DayColumn);
 
-    onNavigate: React.PropTypes.func,
-    onSelectSlot: React.PropTypes.func,
-    onSelectEnd: React.PropTypes.func,
-    onSelectStart: React.PropTypes.func,
-    onSelectEvent: React.PropTypes.func,
+var _EventRow = require('./EventRow');
 
-    messages: React.PropTypes.object,
-    components: React.PropTypes.object.isRequired,
+var _EventRow2 = _interopRequireDefault(_EventRow);
+
+var _TimeColumn = require('./TimeColumn');
+
+var _TimeColumn2 = _interopRequireDefault(_TimeColumn);
+
+var _BackgroundCells = require('./BackgroundCells');
+
+var _BackgroundCells2 = _interopRequireDefault(_BackgroundCells);
+
+var _width = require('dom-helpers/query/width');
+
+var _width2 = _interopRequireDefault(_width);
+
+var _scrollbarSize = require('dom-helpers/util/scrollbarSize');
+
+var _scrollbarSize2 = _interopRequireDefault(_scrollbarSize);
+
+var _messages = require('./utils/messages');
+
+var _messages2 = _interopRequireDefault(_messages);
+
+var _propTypes = require('./utils/propTypes');
+
+var _helpers = require('./utils/helpers');
+
+var _constants = require('./utils/constants');
+
+var _accessors = require('./utils/accessors');
+
+var _eventLevels2 = require('./utils/eventLevels');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var MIN_ROWS = 2;
+
+var TimeGrid = function (_Component) {
+  _inherits(TimeGrid, _Component);
+
+  function TimeGrid(props) {
+    _classCallCheck(this, TimeGrid);
+
+    var _this = _possibleConstructorReturn(this, _Component.call(this, props));
+
+    _this.state = { gutterWidth: undefined, isOverflowing: null };
+    _this._selectEvent = _this._selectEvent.bind(_this);
+    _this._headerClick = _this._headerClick.bind(_this);
+    return _this;
   }
 
-  static defaultProps = {
-    step: 30,
-    min: dates.startOf(new Date(), 'day'),
-    max: dates.endOf(new Date(), 'day'),
-    scrollToTime: dates.startOf(new Date(), 'day'),
-    /* these 2 are needed to satisfy requirements from TimeColumn required props
-     * There is a strange bug in React, using ...TimeColumn.defaultProps causes weird crashes
-     */
-    type: 'gutter',
-    now: new Date()
-  }
-
-  constructor(props) {
-    super(props)
-    this.state = { gutterWidth: undefined, isOverflowing: null };
-    this.handleSelectEvent = this.handleSelectEvent.bind(this)
-    this.handleHeaderClick = this.handleHeaderClick.bind(this)
-  }
-
-  componentWillMount() {
+  TimeGrid.prototype.componentWillMount = function componentWillMount() {
     this._gutters = [];
     this.calculateScroll();
-  }
+  };
 
-  componentDidMount() {
+  TimeGrid.prototype.componentDidMount = function componentDidMount() {
     this.checkOverflow();
 
     if (this.props.width == null) {
-      this.measureGutter()
+      this.measureGutter();
     }
     this.applyScroll();
+  };
 
-    this.positionTimeIndicator();
-    this.triggerTimeIndicatorUpdate();
-  }
-
-  componentWillUnmount() {
-    window.clearTimeout(this._timeIndicatorTimeout);
-  }
-
-  componentDidUpdate() {
+  TimeGrid.prototype.componentDidUpdate = function componentDidUpdate() {
     if (this.props.width == null && !this.state.gutterWidth) {
-      this.measureGutter()
+      this.measureGutter();
     }
 
     this.applyScroll();
-    this.positionTimeIndicator();
     //this.checkOverflow()
-  }
+  };
 
-  componentWillReceiveProps(nextProps) {
-    const { start, scrollToTime } = this.props;
+  TimeGrid.prototype.componentWillReceiveProps = function componentWillReceiveProps(nextProps) {
+    var _props = this.props;
+    var start = _props.start;
+    var scrollToTime = _props.scrollToTime;
     // When paginating, reset scroll
-    if (
-      !dates.eq(nextProps.start, start, 'minute') ||
-      !dates.eq(nextProps.scrollToTime, scrollToTime, 'minute')
-    ) {
+
+    if (!_dates2.default.eq(nextProps.start, start) || nextProps.scrollToTime !== scrollToTime) {
       this.calculateScroll();
     }
-  }
+  };
 
-  handleSelectAllDaySlot = (slots) => {
-    const { onSelectSlot } = this.props;
-    notify(onSelectSlot, {
-      slots,
-      start: slots[0],
-      end: slots[slots.length - 1]
-    })
-  }
+  TimeGrid.prototype.render = function render() {
+    var _this2 = this;
 
-  render() {
-    let {
-        events
-      , start
-      , end
-      , width
-      , startAccessor
-      , endAccessor
-      , allDayAccessor } = this.props;
+    var _props2 = this.props;
+    var events = _props2.events;
+    var start = _props2.start;
+    var end = _props2.end;
+    var width = _props2.width;
+    var startAccessor = _props2.startAccessor;
+    var endAccessor = _props2.endAccessor;
+    var allDayAccessor = _props2.allDayAccessor;
+
 
     width = width || this.state.gutterWidth;
 
-    let range = dates.range(start, end, 'day')
+    var range = _dates2.default.range(start, end, 'day');
 
-    this.slots = range.length;
+    this._slots = range.length;
 
-    let allDayEvents = []
-      , rangeEvents = [];
+    var allDayEvents = [],
+        rangeEvents = [];
 
-    events.forEach(event => {
-      if (inRange(event, start, end, this.props)) {
-        let eStart = get(event, startAccessor)
-          , eEnd = get(event, endAccessor);
+    events.forEach(function (event) {
+      if ((0, _eventLevels2.inRange)(event, start, end, _this2.props)) {
+        var eStart = (0, _accessors.accessor)(event, startAccessor),
+            eEnd = (0, _accessors.accessor)(event, endAccessor);
 
-        if (
-          get(event, allDayAccessor)
-          || !dates.eq(eStart, eEnd, 'day')
-          || (dates.isJustDate(eStart) && dates.isJustDate(eEnd)))
-        {
-          allDayEvents.push(event)
-        }
-        else
-          rangeEvents.push(event)
+        if ((0, _accessors.accessor)(event, allDayAccessor) || _dates2.default.isJustDate(eStart) && _dates2.default.isJustDate(eEnd)) {
+          allDayEvents.push(event);
+        } else rangeEvents.push(event);
       }
-    })
+    });
 
-    allDayEvents.sort((a, b) => sortEvents(a, b, this.props))
+    allDayEvents.sort(function (a, b) {
+      return (0, _eventLevels2.sortEvents)(a, b, _this2.props);
+    });
 
-    let gutterRef = ref => this._gutters[1] = ref && findDOMNode(ref);
+    var _endOfRange = (0, _eventLevels2.endOfRange)(range);
 
-    return (
-      <div className='rbc-time-view'>
+    var first = _endOfRange.first;
+    var last = _endOfRange.last;
 
-        {this.renderHeader(range, allDayEvents, width)}
 
-        <div ref='content' className='rbc-time-content'>
-          <div ref='timeIndicator' className='rbc-current-time-indicator' />
+    var segments = allDayEvents.map(function (evt) {
+      return (0, _eventLevels2.eventSegments)(evt, first, last, _this2.props);
+    });
 
-          <TimeColumn
-            {...this.props}
-            showLabels
-            style={{ width }}
-            ref={gutterRef}
-            className='rbc-time-gutter'
-          />
+    var gutterRef = function gutterRef(ref) {
+      return _this2._gutters[1] = ref && (0, _reactDom.findDOMNode)(ref);
+    };
 
-          {this.renderEvents(range, rangeEvents, this.props.now)}
-
-        </div>
-      </div>
+    return _react2.default.createElement(
+      'div',
+      { className: 'rbc-time-view' },
+      this.renderHeader(range, segments, width),
+      _react2.default.createElement(
+        'div',
+        { ref: 'content', className: 'rbc-time-content' },
+        _react2.default.createElement(_TimeColumn2.default, _extends({}, this.props, {
+          showLabels: true,
+          style: { width: width },
+          ref: gutterRef,
+          className: 'rbc-time-gutter'
+        })),
+        this.renderEvents(range, rangeEvents, this.props.now)
+      )
     );
-  }
+  };
 
-  renderEvents(range, events, today){
-    let { min, max, endAccessor, startAccessor, components } = this.props;
+  TimeGrid.prototype.renderEvents = function renderEvents(range, events, today) {
+    var _this3 = this;
 
-    return range.map((date, idx) => {
-      let daysEvents = events.filter(
-        event => dates.inRange(date,
-          get(event, startAccessor),
-          get(event, endAccessor), 'day')
+    var _props3 = this.props;
+    var min = _props3.min;
+    var max = _props3.max;
+    var endAccessor = _props3.endAccessor;
+    var startAccessor = _props3.startAccessor;
+    var components = _props3.components;
+
+
+    return range.map(function (date, idx) {
+      var daysEvents = events.filter(function (event) {
+        return _dates2.default.inRange(date, (0, _accessors.accessor)(event, startAccessor), (0, _accessors.accessor)(event, endAccessor), 'day');
+      });
+
+      return _react2.default.createElement(_DayColumn2.default, _extends({}, _this3.props, {
+        min: _dates2.default.merge(date, min),
+        max: _dates2.default.merge(date, max),
+        eventComponent: components.event,
+        className: (0, _classnames2.default)({ 'rbc-now': _dates2.default.eq(date, today, 'day') }),
+        style: (0, _eventLevels2.segStyle)(1, _this3._slots),
+        key: idx,
+        date: date,
+        events: daysEvents
+      }));
+    });
+  };
+
+  TimeGrid.prototype.renderAllDayEvents = function renderAllDayEvents(range, levels) {
+    var _this4 = this;
+
+    var _endOfRange2 = (0, _eventLevels2.endOfRange)(range);
+
+    var first = _endOfRange2.first;
+    var last = _endOfRange2.last;
+
+
+    while (levels.length < MIN_ROWS) {
+      levels.push([]);
+    }return levels.map(function (segs, idx) {
+      return _react2.default.createElement(_EventRow2.default, {
+        eventComponent: _this4.props.components.event,
+        titleAccessor: _this4.props.titleAccessor,
+        startAccessor: _this4.props.startAccessor,
+        endAccessor: _this4.props.endAccessor,
+        allDayAccessor: _this4.props.allDayAccessor,
+        eventPropGetter: _this4.props.eventPropGetter,
+        onSelect: _this4._selectEvent,
+        slots: _this4._slots,
+        key: idx,
+        segments: segs,
+        start: first,
+        end: last
+      });
+    });
+  };
+
+  TimeGrid.prototype.renderHeader = function renderHeader(range, segments, width) {
+    var _this5 = this;
+
+    var _props4 = this.props;
+    var messages = _props4.messages;
+    var rtl = _props4.rtl;
+
+    var _ref = this.state || {};
+
+    var isOverflowing = _ref.isOverflowing;
+
+    var _eventLevels = (0, _eventLevels2.eventLevels)(segments);
+
+    var levels = _eventLevels.levels;
+
+    var style = {};
+
+    if (isOverflowing) style[rtl ? 'marginLeft' : 'marginRight'] = (0, _scrollbarSize2.default)() + 'px';
+
+    return _react2.default.createElement(
+      'div',
+      {
+        ref: 'headerCell',
+        className: (0, _classnames2.default)('rbc-time-header', isOverflowing && 'rbc-overflowing'),
+        style: style
+      },
+      _react2.default.createElement(
+        'div',
+        { className: 'rbc-row' },
+        _react2.default.createElement('div', {
+          className: 'rbc-label rbc-header-gutter',
+          style: { width: width }
+        }),
+        this.renderHeaderCells(range)
+      ),
+      _react2.default.createElement(
+        'div',
+        { className: 'rbc-row' },
+        _react2.default.createElement(
+          'div',
+          {
+            ref: function ref(_ref2) {
+              return _this5._gutters[0] = _ref2;
+            },
+            className: 'rbc-label rbc-header-gutter',
+            style: { width: width }
+          },
+          (0, _messages2.default)(messages).allDay
+        ),
+        _react2.default.createElement(
+          'div',
+          { ref: 'allDay', className: 'rbc-allday-cell' },
+          _react2.default.createElement(_BackgroundCells2.default, {
+            slots: range.length,
+            container: function container() {
+              return _this5.refs.allDay;
+            },
+            selectable: this.props.selectable
+          }),
+          _react2.default.createElement(
+            'div',
+            { style: { zIndex: 1, position: 'relative' } },
+            this.renderAllDayEvents(range, levels)
+          )
+        )
       )
+    );
+  };
 
-      return (
-        <DayColumn
-          {...this.props }
-          min={dates.merge(date, min)}
-          max={dates.merge(date, max)}
-          eventComponent={components.event}
-          eventWrapperComponent={components.eventWrapper}
-          dayWrapperComponent={components.dayWrapper}
-          className={cn({ 'rbc-now': dates.eq(date, today, 'day') })}
-          style={segStyle(1, this.slots)}
-          key={idx}
-          date={date}
-          events={daysEvents}
-        />
-      )
-    })
-  }
+  TimeGrid.prototype.renderHeaderCells = function renderHeaderCells(range) {
+    var _this6 = this;
 
-  renderHeader(range, events, width) {
-    let { messages, rtl, selectable, components } = this.props;
-    let { isOverflowing } = this.state || {};
+    var _props5 = this.props;
+    var dayFormat = _props5.dayFormat;
+    var culture = _props5.culture;
 
-    let style = {};
-    if (isOverflowing)
-      style[rtl ? 'marginLeft' : 'marginRight'] = scrollbarSize() + 'px';
 
-    return (
-      <div
-        ref='headerCell'
-        className={cn(
-          'rbc-time-header',
-          isOverflowing && 'rbc-overflowing'
-        )}
-        style={style}
-      >
-        <div className='rbc-row'>
-          <div
-            className='rbc-label rbc-header-gutter'
-            style={{ width }}
-          />
-          { this.renderHeaderCells(range) }
-        </div>
-        <div className='rbc-row'>
-          <div
-            ref={ref => this._gutters[0] = ref}
-            className='rbc-label rbc-header-gutter'
-            style={{ width }}
-          >
-            { message(messages).allDay }
-          </div>
-          <DateContentRow
-            minRows={2}
-            range={range}
-            rtl={this.props.rtl}
-            events={events}
-            className='rbc-allday-cell'
-            selectable={selectable}
-            onSelectSlot={this.handleSelectAllDaySlot}
-            dateCellWrapper={components.dateCellWrapper}
-            eventComponent={this.props.components.event}
-            eventWrapperComponent={this.props.components.eventWrapper}
-            titleAccessor={this.props.titleAccessor}
-            startAccessor={this.props.startAccessor}
-            endAccessor={this.props.endAccessor}
-            allDayAccessor={this.props.allDayAccessor}
-            eventPropGetter={this.props.eventPropGetter}
-            selected={this.props.selected}
-            onSelect={this.handleSelectEvent}
-          />
-        </div>
-      </div>
-    )
-  }
+    return range.map(function (date, i) {
+      return _react2.default.createElement(
+        'div',
+        {
+          key: i,
+          className: 'rbc-header',
+          style: (0, _eventLevels2.segStyle)(1, _this6._slots)
+        },
+        _react2.default.createElement(
+          'a',
+          { href: '#', onClick: _this6._headerClick.bind(null, date) },
+          _localizer2.default.format(date, dayFormat, culture)
+        )
+      );
+    });
+  };
 
-  renderHeaderCells(range){
-    let { dayFormat, culture, components } = this.props;
-    let HeaderComponent = components.header || Header
+  TimeGrid.prototype._headerClick = function _headerClick(date, e) {
+    e.preventDefault();
+    (0, _helpers.notify)(this.props.onNavigate, [_constants.navigate.DATE, date]);
+  };
 
-    return range.map((date, i) =>
-      <div
-        key={i}
-        className={cn(
-          'rbc-header',
-          dates.isToday(date) && 'rbc-today',
-        )}
-        style={segStyle(1, this.slots)}
-      >
-        <a href='#' onClick={this.handleHeaderClick.bind(null, date)}>
-          <HeaderComponent
-            date={date}
-            label={localizer.format(date, dayFormat, culture)}
-            localizer={localizer}
-            format={dayFormat}
-            culture={culture}
-          />
-        </a>
-      </div>
-    )
-  }
+  TimeGrid.prototype._selectEvent = function _selectEvent() {
+    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
 
-  handleHeaderClick(date, e){
-    e.preventDefault()
-    notify(this.props.onNavigate, [navigate.DATE, date])
-  }
+    (0, _helpers.notify)(this.props.onSelectEvent, args);
+  };
 
-  handleSelectEvent(...args){
-    notify(this.props.onSelectEvent, args)
-  }
-
-  handleSelectAlldayEvent(...args){
-    //cancel any pending selections so only the event click goes through.
-    this.clearSelection()
-    notify(this.props.onSelectEvent, args)
-  }
-
-  clearSelection(){
-    clearTimeout(this._selectTimer)
-    this._pendingSelection = [];
-  }
-
-  measureGutter() {
-    let width = this.state.gutterWidth;
-    let gutterCells = this._gutters;
+  TimeGrid.prototype.measureGutter = function measureGutter() {
+    var width = this.state.gutterWidth;
+    var gutterCells = this._gutters;
 
     if (!width) {
-      width = Math.max(...gutterCells.map(getWidth));
+      width = Math.max.apply(Math, gutterCells.map(_width2.default));
 
       if (width) {
-        this.setState({ gutterWidth: width })
+        this.setState({ gutterWidth: width });
       }
     }
-  }
+  };
 
-  applyScroll() {
+  TimeGrid.prototype.applyScroll = function applyScroll() {
     if (this._scrollRatio) {
-      const { content } = this.refs;
+      var content = this.refs.content;
+
       content.scrollTop = content.scrollHeight * this._scrollRatio;
       // Only do this once
       this._scrollRatio = null;
     }
-  }
+  };
 
-  calculateScroll() {
-    const { min, max, scrollToTime } = this.props;
+  TimeGrid.prototype.calculateScroll = function calculateScroll() {
+    var _props6 = this.props;
+    var min = _props6.min;
+    var max = _props6.max;
+    var scrollToTime = _props6.scrollToTime;
 
-    const diffMillis = scrollToTime - dates.startOf(scrollToTime, 'day');
-    const totalMillis = dates.diff(max, min);
+
+    var diffMillis = scrollToTime - _dates2.default.startOf(scrollToTime, 'day');
+    var totalMillis = _dates2.default.diff(max, min);
 
     this._scrollRatio = diffMillis / totalMillis;
-  }
+  };
 
-  checkOverflow() {
+  TimeGrid.prototype.checkOverflow = function checkOverflow() {
+    var _this7 = this;
+
     if (this._updatingOverflow) return;
 
-    let isOverflowing = this.refs.content.scrollHeight > this.refs.content.clientHeight;
+    var isOverflowing = this.refs.content.scrollHeight > this.refs.content.clientHeight;
 
     if (this.state.isOverflowing !== isOverflowing) {
       this._updatingOverflow = true;
-      this.setState({ isOverflowing }, () => {
-        this._updatingOverflow = false;
-      })
+      this.setState({ isOverflowing: isOverflowing }, function () {
+        _this7._updatingOverflow = false;
+      });
     }
-  }
+  };
 
-  positionTimeIndicator() {
-    const { rtl, min, max } = this.props
-    const now = new Date();
+  return TimeGrid;
+}(_react.Component);
 
-    const secondsGrid = dates.diff(max, min, 'seconds');
-    const secondsPassed = dates.diff(now, min, 'seconds');
+TimeGrid.propTypes = _extends({}, _DayColumn2.default.propTypes, _TimeColumn2.default.propTypes, {
 
-    const timeIndicator = this.refs.timeIndicator;
-    const factor = secondsPassed / secondsGrid;
-    const timeGutter = this._gutters[this._gutters.length - 1];
+  step: _react2.default.PropTypes.number,
+  min: _react2.default.PropTypes.instanceOf(Date),
+  max: _react2.default.PropTypes.instanceOf(Date),
+  scrollToTime: _react2.default.PropTypes.instanceOf(Date),
+  dayFormat: _propTypes.dateFormat,
+  rtl: _react2.default.PropTypes.bool
+});
+TimeGrid.defaultProps = _extends({}, _DayColumn2.default.defaultProps, _TimeColumn2.default.defaultProps, {
 
-    if (timeGutter && now >= min && now <= max) {
-      const pixelHeight = timeGutter.offsetHeight;
-      const offset = Math.floor(factor * pixelHeight);
-
-      timeIndicator.style.display = 'block';
-      timeIndicator.style[rtl ? 'left' : 'right'] = 0;
-      timeIndicator.style[rtl ? 'right' : 'left'] = timeGutter.offsetWidth + 'px';
-      timeIndicator.style.top = offset + 'px';
-    } else {
-      timeIndicator.style.display = 'none';
-    }
-  }
-
-  triggerTimeIndicatorUpdate() {
-    // Update the position of the time indicator every minute
-    this._timeIndicatorTimeout = window.setTimeout(() => {
-      this.positionTimeIndicator();
-
-      this.triggerTimeIndicatorUpdate();
-    }, 60000)
-  }
-}
+  step: 30,
+  min: _dates2.default.startOf(new Date(), 'day'),
+  max: _dates2.default.endOf(new Date(), 'day'),
+  scrollToTime: _dates2.default.startOf(new Date(), 'day'),
+  /* these 2 are needed to satisfy requirements from TimeColumn required props
+   * There is a strange bug in React, using ...TimeColumn.defaultProps causes weird crashes
+   */
+  type: 'gutter',
+  now: new Date()
+});
+exports.default = TimeGrid;
+module.exports = exports['default'];
