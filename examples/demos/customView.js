@@ -1,11 +1,11 @@
 import React from 'react';
-
+import BigCalendar from '../../src/index';
 import events from '../events';
-import BigCalendar from 'react-big-calendar';
-import Week from 'react-big-calendar/lib/Week';
-import dates from 'react-big-calendar/lib/utils/dates';
-import localizer from 'react-big-calendar/lib/localizer';
-import TimeGrid from 'react-big-calendar/lib/TimeGrid';
+import { navigate } from 'react-big-calendar/utils/constants';
+import Week from 'react-big-calendar/Week';
+import dates from 'react-big-calendar/utils/dates';
+import localizer from 'react-big-calendar/localizer';
+import TimeGrid from 'react-big-calendar/TimeGrid';
 
 class MyWeek extends Week {
   render() {
@@ -20,10 +20,10 @@ class MyWeek extends Week {
 
 MyWeek.navigate = (date, action)=>{
   switch (action){
-    case BigCalendar.Navigate.PREVIOUS:
+    case navigate.PREVIOUS:
       return dates.add(date, -1, 'week');
 
-    case BigCalendar.Navigate.NEXT:
+    case navigate.NEXT:
       return dates.add(date, 1, 'week')
 
     default:

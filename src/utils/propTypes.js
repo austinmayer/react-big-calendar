@@ -3,21 +3,9 @@ import localizer from '../localizer';
 import elementType from 'react-prop-types/lib/elementType';
 import all from 'react-prop-types/lib/all';
 import { views as Views } from './constants';
-
-import createChainableTypeChecker from 'react-prop-types/lib/utils/createChainableTypeChecker';
+import {createChainableTypeChecker} from 'react-prop-types/lib/common';
 
 export { elementType }
-
-// export contextShape = React.PropTypes.shape({
-//   formats: React.PropTypes.object.isRequired,
-//   messages: React.PropTypes.object.isRequired,
-//   accessors: React.PropTypes.shape({
-//     titleAccessor: accessor,
-//     startAccessor: accessor,
-//     endAccessor: accessor,
-//     allDayAccessor: accessor,
-//   }).isRequired,
-// }).isRequired,
 
 export let eventComponent = PropTypes.oneOfType([
   elementType,
@@ -40,7 +28,6 @@ export let accessor = PropTypes.oneOfType([
 export let dateFormat = createChainableTypeChecker(
     (...args) => localizer.propType && localizer.propType(...args))
 
-export let dateRangeFormat = PropTypes.func
 
 export let views = PropTypes.oneOfType([
   PropTypes.arrayOf(
@@ -48,7 +35,7 @@ export let views = PropTypes.oneOfType([
   ),
   all([
     PropTypes.object,
-    (props, name, ...args)=>{
+    (props, name, component)=>{
       let prop = props[name]
         , err;
 
@@ -57,7 +44,7 @@ export let views = PropTypes.oneOfType([
           viewNames.indexOf(key) !== -1 &&
           typeof prop[key] === 'boolean';
 
-        return isBuiltinView || !(err = elementType(prop, key, ...args))
+        return isBuiltinView || !(err = elementType(prop, key, component))
       })
 
       return err || null

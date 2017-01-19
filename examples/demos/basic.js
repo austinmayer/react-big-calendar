@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { PropTypes } from 'react';
 import BigCalendar from 'react-big-calendar';
 import events from '../events';
 

@@ -62,10 +62,10 @@ export function eventLevels(rowSegments, limit = Infinity){
 
 export function inRange(e, start, end, { startAccessor, endAccessor }){
   let eStart = dates.startOf(get(e, startAccessor), 'day')
-  let eEnd = get(e, endAccessor)
+  let eEnd = dates.ceil(get(e, endAccessor), 'day')
 
   let startsBeforeEnd = dates.lte(eStart, end, 'day')
-  let endsAfterStart = dates.gte(eEnd, start, 'day')
+  let endsAfterStart = dates.gt(eEnd, start, 'day')
 
   return startsBeforeEnd && endsAfterStart
 }

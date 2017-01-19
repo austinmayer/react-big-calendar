@@ -3,17 +3,7 @@ import cn from 'classnames';
 import message from './utils/messages';
 import { navigate } from './utils/constants';
 
-class Toolbar extends React.Component {
-  static propTypes = {
-    view: React.PropTypes.string.isRequired,
-    views: React.PropTypes.arrayOf(
-      React.PropTypes.string,
-    ).isRequired,
-    label: React.PropTypes.node.isRequired,
-    messages: React.PropTypes.object,
-    onNavigate: React.PropTypes.func.isRequired,
-    onViewChange: React.PropTypes.func.isRequired,
-  }
+let Toolbar = React.createClass({
 
   render() {
     let { messages, label } = this.props;
@@ -54,15 +44,15 @@ class Toolbar extends React.Component {
         </span>
       </div>
     );
-  }
+  },
 
-  navigate = (action) => {
+  navigate(action){
     this.props.onNavigate(action)
-  }
+  },
 
-  view = (view) => {
+  view(view){
     this.props.onViewChange(view)
-  }
+  },
 
   viewNamesGroup(messages) {
     let viewNames = this.props.views
@@ -81,6 +71,6 @@ class Toolbar extends React.Component {
       )
     }
   }
-}
+});
 
 export default Toolbar;

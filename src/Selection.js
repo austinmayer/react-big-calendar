@@ -1,5 +1,4 @@
 import contains from 'dom-helpers/query/contains';
-import closest from 'dom-helpers/query/closest';
 import events from 'dom-helpers/events';
 
 function addEventListener(type, handler) {
@@ -9,13 +8,8 @@ function addEventListener(type, handler) {
   }
 }
 
-function isOverContainer(container, x, y) {
+function isOverContainer(container, x, y){
   return !container || contains(container, document.elementFromPoint(x, y))
-}
-
-export function isEvent(node, { clientX, clientY, }) {
-  let target = document.elementFromPoint(clientX, clientY);
-  return !!closest(target, '.rbc-event', node)
 }
 
 const clickTolerance = 5;
@@ -52,13 +46,8 @@ class Selection {
   }
 
   emit(type, ...args){
-    let result;
     let handlers = this._listeners[type] || [];
-    handlers.forEach(fn => {
-      if (result === undefined)
-        result = fn(...args);
-    })
-    return result;
+    handlers.forEach(fn => fn(...args))
   }
 
   teardown() {
@@ -93,12 +82,7 @@ class Selection {
       , collides, offsetData;
 
     // Right clicks
-    if (
-      e.which === 3 ||
-      e.button === 2 ||
-      !isOverContainer(node, e.clientX, e.clientY)
-
-    )
+    if (e.which === 3 || e.button === 2 || !isOverContainer(node, e.clientX, e.clientY))
       return;
 
     if (!this.globalMouse && node && !contains(node, e.target)) {
@@ -118,17 +102,14 @@ class Selection {
       if (!collides) return;
     }
 
-    let result = this.emit('mousedown', this._mouseDownData = {
+    this.emit('mousedown', this._mouseDownData = {
       x: e.pageX,
       y: e.pageY,
       clientX: e.clientX,
       clientY: e.clientY
     });
 
-    if (result === false)
-      return;
-
-    //e.preventDefault();
+    e.preventDefault();
 
     this._onMouseUpListener = addEventListener('mouseup', this._mouseUp)
     this._onMouseMoveListener = addEventListener('mousemove', this._openSelector)
@@ -152,12 +133,7 @@ class Selection {
     }
 
     if(click && inRoot)
-      return this.emit('click', {
-        x: e.pageX,
-        y: e.pageY,
-        clientX: e.clientX,
-        clientY: e.clientY,
-      })
+      return this.emit('click', { x: e.pageX, y: e.pageY })
 
     // User drag-clicked in the Selectable area
     if(!click)
